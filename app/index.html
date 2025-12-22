@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prédicteur de Prix Immobilier</title>
+    <link rel="stylesheet" href="style.css">
+ 
+</head>
+<body>
+    <div class="container">
+        <h1>  Prédiction de Prix Immobilier</h1>
+        <p class="subtitle">Estimez le prix de votre bien en quelques étapes</p>
+
+        <div id="error-container"></div>
+
+        <div class="progress-bar">
+            <div class="progress-step active" id="step1">1</div>
+            <div class="progress-step" id="step2">2</div>
+            <div class="progress-step" id="step3">3</div>
+            <div class="progress-step" id="step4">4</div>
+        </div>
+
+        <!-- Étape 1: Type de bien -->
+        <div class="form-section active" id="section1">
+            <h2 style="margin-bottom: 20px; color: #333; font-size: 20px;">Type de bien</h2>
+            <div class="type-grid">
+                <div class="type-card" data-type="appartement">
+                    <div class="type-icon">🏢</div>
+                    <div>Appartement</div>
+                </div>
+                <div class="type-card" data-type="villa">
+                    <div class="type-icon">🏰</div>
+                    <div>Villa</div>
+                </div>
+                <div class="type-card" data-type="maison">
+                    <div class="type-icon">🏡</div>
+                    <div>Maison</div>
+                </div>
+                <div class="type-card" data-type="bureau">
+                    <div class="type-icon">🏢</div>
+                    <div>Bureau</div>
+                </div>
+                <div class="type-card" data-type="riad">
+                    <div class="type-icon">🕌</div>
+                    <div>Riad</div>
+                </div>
+                <div class="type-card" data-type="local_commercial">
+                    <div class="type-icon">🏪</div>
+                    <div>Local Commercial</div>
+                </div>
+                <div class="type-card" data-type="terrain">
+                    <div class="type-icon">🌳</div>
+                    <div>Terrain</div>
+                </div>
+                <div class="type-card" data-type="ferme">
+                    <div class="type-icon">🚜</div>
+                    <div>Ferme</div>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn-primary" onclick="nextStep()" id="nextBtn1" disabled>Suivant</button>
+            </div>
+        </div>
+
+        <!-- Étape 2: Localisation -->
+        <div class="form-section" id="section2">
+            <h2 style="margin-bottom: 20px; color: #333; font-size: 20px;">Localisation</h2>
+            <div class="form-group">
+                <label>Ville</label>
+                <select id="ville" onchange="loadQuartiers()">
+                    <option value="">Sélectionnez une ville</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Quartier</label>
+                <select id="quartier" onchange="validateStep2()">
+                    <option value="">D'abord sélectionner une ville</option>
+                </select>
+            </div>
+            <div class="btn-group">
+                <button class="btn-secondary" onclick="prevStep()">Précédent</button>
+                <button class="btn-primary" onclick="nextStep()" id="nextBtn2" disabled>Suivant</button>
+            </div>
+        </div>
+
+        <!-- Étape 3: Caractéristiques -->
+        <div class="form-section" id="section3">
+            <h2 style="margin-bottom: 20px; color: #333; font-size: 20px;">Caractéristiques</h2>
+            <div class="form-group">
+                <label>Surface (m²)</label>
+                <input type="number" id="surface" min="1" placeholder="Ex: 120">
+            </div>
+            <div class="form-group" id="chambresGroup">
+                <label>Nombre de chambres</label>
+                <input type="number" id="nombre_de_chambres" min="0" placeholder="Ex: 2">
+            </div>
+            <div class="form-group" id="sallesGroup">
+                <label>Nombre de salles de bain</label>
+                <input type="number" id="nombre_de_salles_de_bain" min="0" placeholder="Ex: 1">
+            </div>
+            <div class="btn-group">
+                <button class="btn-secondary" onclick="prevStep()">Précédent</button>
+                <button class="btn-primary" onclick="nextStep()" id="nextBtn3" disabled>Suivant</button>
+            </div>
+        </div>
+
+        <!-- Étape 4: Équipements -->
+        <div class="form-section" id="section4">
+            <h2 style="margin-bottom: 20px; color: #333; font-size: 20px;">Équipements</h2>
+            <div id="equipements"></div>
+            <div class="btn-group">
+                <button class="btn-secondary" onclick="prevStep()">Précédent</button>
+                <button class="btn-primary" onclick="predict()">Estimer le prix</button>
+            </div>
+        </div>
+
+        <!-- Résultat -->
+        <div class="result-card" id="result">
+            <div style="font-size: 64px; margin-bottom: 20px;">🎉</div>
+            <h2 style="color: #333; margin-bottom: 10px;">Prix estimé</h2>
+            <div class="price-display" id="priceDisplay">---</div>
+            <p class="price-label">Dirhams Marocains (MAD)</p>
+            <button class="btn-primary" onclick="reset()" style="max-width: 300px; margin: 0 auto;">Nouvelle estimation</button>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading hidden" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: #666;">Calcul en cours...</p>
+        </div>
+    </div>
+
+    <!-- Chargez le fichier data.js généré -->
+    <script src="data.js"></script>
+    
+    <script src="script.js"></script>
+</body>
+</html>
