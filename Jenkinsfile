@@ -48,7 +48,7 @@ pipeline {
         stage('4. Ansible - Deploy') {
             steps {
                 // Utilisation de l'ID 'azureuser' créé dans Jenkins
-                withCredentials([sshUserPrivateKey(credentialsId: 'azureuser', keyFileVariable: 'SSH_KEY')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'azure-vm-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                     script {
                         /* Exécution via WSL car Ansible n'est pas natif Windows.
                            On utilise wslpath pour convertir le chemin de la clé Jenkins (Windows) 
