@@ -25,7 +25,6 @@ pipeline {
             }
             steps {
                 dir('terraform') {
-                    // Utilisation de 'bat' pour Windows
                     bat 'terraform init'
                     bat 'terraform apply -auto-approve'
                 }
@@ -36,7 +35,7 @@ pipeline {
             steps {
                 script {
                     def imageTag = "${DOCKER_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER}"
-                    // Construction et envoi de l'image via le moteur Docker actif
+                    // Construction et envoi via le moteur Docker actif
                     bat "docker build -t ${imageTag} ."
                     bat "echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
                     bat "docker push ${imageTag}"
@@ -48,15 +47,17 @@ pipeline {
 
         stage('4. Ansible - Deploy') {
             steps {
-                // Utilisation de withCredentials pour éviter l'erreur StringIndexOutOfBounds du plugin sshagent
-                withCredentials([sshUserPrivateKey(credentialsId: 'azure-vm-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+                // Utilisation de l'ID 'azureuser' créé dans Jenkins
+                withCredentials([sshUserPrivateKey(credentialsId: 'azureuser', keyFileVariable: 'SSH_KEY')]) {
                     script {
-                        // On utilise la clé temporaire via %SSH_KEY% car nous sommes sous Windows (bat)
-                        // L'agent OpenSSH étant 'Running', le fichier de clé sera accessible
+                        /* Exécution via WSL car Ansible n'est pas natif Windows.
+                           On utilise wslpath pour convertir le chemin de la clé Jenkins (Windows) 
+                           en chemin compréhensible par Linux.
+                        */
                         bat """
-                        ansible-playbook -i inventory.ini deploy.yml \
+                        wsl ansible-playbook -i inventory.ini deploy.yml \
                         -u azureuser \
-                        --private-key=%SSH_KEY% \
+                        --private-key=\$(wslpath '%SSH_KEY%') \
                         --extra-vars "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
                         """
                     }
