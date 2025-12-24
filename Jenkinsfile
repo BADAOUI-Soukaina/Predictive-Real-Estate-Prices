@@ -47,17 +47,16 @@ pipeline {
 
         stage('4. Ansible - Deploy') {
             steps {
-                // sshagent permet de gérer la clé privée en mémoire de manière sécurisée
-                sshagent(['azure-vm-ssh-key']) {
-                    dir('ansible') {
-                        // Utilisation de 'sh' car Ansible nécessite généralement Git Bash ou WSL sur Windows
-                        // Si vous n'avez pas WSL, il faudra exécuter cette commande depuis Git Bash
-                        sh "ansible-playbook -i inventory.ini deploy.yml --extra-vars 'docker_image_tag=${env.BUILD_NUMBER}'"
+                // 'azureuser' doit être l'ID de vos identifiants de type "SSH User Private Key" dans Jenkins
+                withCredentials([sshUserPrivateKey(credentialsId: 'azureuser', keyFileVariable: 'SSH_KEY')]) {
+                    script {
+                        // On injecte la clé via l'argument --private-key
+                        // On ajoute -o StrictHostKeyChecking=no pour éviter les blocages de confirmation SSH
+                        sh "ansible-playbook -i inventory.ini deploy.yml --private-key=${SSH_KEY} -u azureuser --extra-vars 'ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"'"
                     }
                 }
             }
-        }
-    }
+         }
 
     post {
         success {
