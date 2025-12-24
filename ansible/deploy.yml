@@ -1,0 +1,71 @@
+---
+- name: Deploiement de l'image depuis Docker Hub
+  hosts: azure_vm
+  become: yes
+  vars:
+    docker_image_name: "sgmarwa/immobilier_price_prediction-app:latest"
+
+  tasks:
+    - name: Nettoyer les anciens fichiers de depot Docker conflictuels
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/sources.list.d/docker.list
+        - /etc/apt/keyrings/docker.asc
+
+    - name: Installation des dependances systeme
+      apt:
+        name: [apt-transport-https, ca-certificates, curl, software-properties-common, python3-pip]
+        update_cache: yes
+        state: present
+
+    - name: Ajouter la cle GPG officielle de Docker
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Ajouter le depot Docker
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Installer Docker CE (Version stable)
+      apt:
+        name: [docker-ce, docker-ce-cli, containerd.io]
+        update_cache: yes
+        state: present
+
+    - name: Installer et corriger le SDK Docker pour Python
+      pip:
+        name:
+          - docker
+          - requests==2.28.1  # Version spécifique pour éviter le bug http+docker
+        state: latest
+        executable: pip3
+
+    - name: S'assurer que Docker est demarre
+      service:
+        name: docker
+        state: started
+        enabled: yes
+        
+    - name: Telecharger l'image depuis Docker Hub
+      docker_image:
+        name: "{{ docker_image_name }}"
+        source: pull
+
+    - name: Arreter l'ancien conteneur si existant
+      docker_container:
+        name: real_estate_api
+        state: absent
+
+    - name: Lancer le conteneur API
+      docker_container:
+        name: real_estate_api
+        image: "{{ docker_image_name }}"
+        state: started
+        restart_policy: always
+        published_ports:
+          - "8000:8000"
+        
