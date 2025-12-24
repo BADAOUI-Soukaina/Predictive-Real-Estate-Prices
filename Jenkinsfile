@@ -49,7 +49,7 @@ pipeline {
         stage('4. Ansible - Deploy') {
             steps {
                 // Utilisation de withCredentials pour éviter l'erreur StringIndexOutOfBounds du plugin sshagent
-                withCredentials([sshUserPrivateKey(credentialsId: 'azureuser', keyFileVariable: 'SSH_KEY')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'azure-vm-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                     script {
                         // On utilise la clé temporaire via %SSH_KEY% car nous sommes sous Windows (bat)
                         // L'agent OpenSSH étant 'Running', le fichier de clé sera accessible
