@@ -1,6 +1,6 @@
 # 1. Créer un Groupe de Ressources (le dossier virtuel)
 resource "azurerm_resource_group" "rg" {
-  name     = "Predictive-Real-Estate-Prices-V2"
+  name     = "Predictive-Real-Estate-Prices"
   location = "norwayeast" 
 }
 
