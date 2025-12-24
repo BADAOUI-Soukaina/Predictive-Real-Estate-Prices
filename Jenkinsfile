@@ -45,18 +45,17 @@ pipeline {
             }
         }
 
-        stage('4. Ansible - Deploy') {
+         stage('4. Ansible - Deploy') {
             steps {
-                // 'azureuser' doit être l'ID de vos identifiants de type "SSH User Private Key" dans Jenkins
                 withCredentials([sshUserPrivateKey(credentialsId: 'azureuser', keyFileVariable: 'SSH_KEY')]) {
                     script {
-                        // On injecte la clé via l'argument --private-key
-                        // On ajoute -o StrictHostKeyChecking=no pour éviter les blocages de confirmation SSH
-                        sh "ansible-playbook -i inventory.ini deploy.yml --private-key=${SSH_KEY} -u azureuser --extra-vars 'ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"'"
+                        // Utilisation de ansible-playbook avec la variable SSH_KEY
+                        // Note : assurez-vous que 'ansible' est dans votre PATH Windows ou WSL
+                        bat "ansible-playbook -i inventory.ini deploy.yml --private-key=%SSH_KEY% -u azureuser --extra-vars \"ansible_ssh_common_args='-o StrictHostKeyChecking=no'\""
                     }
                 }
             }
-         }
+        }
 
     post {
         success {
