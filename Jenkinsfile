@@ -5,7 +5,7 @@ pipeline {
         DOCKER_USER = 'sgmarwa'
         IMAGE_NAME = 'immobilier-app'
         AZURE_VM_IP = '20.251.192.87'
-        // Appel des identifiants Docker Hub
+        // Identifiants Docker Hub
         DOCKER_HUB_CREDS = credentials('docker-hub-login')
     }
 
@@ -25,6 +25,7 @@ pipeline {
             }
             steps {
                 dir('terraform') {
+                    // Utilisation de 'bat' pour Windows
                     bat 'terraform init'
                     bat 'terraform apply -auto-approve'
                 }
@@ -35,7 +36,7 @@ pipeline {
             steps {
                 script {
                     def imageTag = "${DOCKER_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER}"
-                    // Construction et envoi de l'image
+                    // Construction et envoi de l'image via le moteur Docker actif
                     bat "docker build -t ${imageTag} ."
                     bat "echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
                     bat "docker push ${imageTag}"
@@ -45,17 +46,24 @@ pipeline {
             }
         }
 
-         stage('4. Ansible - Deploy') {
+        stage('4. Ansible - Deploy') {
             steps {
+                // Utilisation de withCredentials pour éviter l'erreur StringIndexOutOfBounds du plugin sshagent
                 withCredentials([sshUserPrivateKey(credentialsId: 'azureuser', keyFileVariable: 'SSH_KEY')]) {
                     script {
-                        // Utilisation de ansible-playbook avec la variable SSH_KEY
-                        // Note : assurez-vous que 'ansible' est dans votre PATH Windows ou WSL
-                        bat "ansible-playbook -i inventory.ini deploy.yml --private-key=%SSH_KEY% -u azureuser --extra-vars \"ansible_ssh_common_args='-o StrictHostKeyChecking=no'\""
+                        // On utilise la clé temporaire via %SSH_KEY% car nous sommes sous Windows (bat)
+                        // L'agent OpenSSH étant 'Running', le fichier de clé sera accessible
+                        bat """
+                        ansible-playbook -i inventory.ini deploy.yml \
+                        -u azureuser \
+                        --private-key=%SSH_KEY% \
+                        --extra-vars "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
+                        """
                     }
                 }
             }
         }
+    }
 
     post {
         success {
