@@ -27,7 +27,7 @@ pipeline {
             }
         }
         
-        stage(' Vérifier les prérequis') {
+        stage(' Verifier les prerequis') {
             steps {
                 echo ' Vérification des outils...'
                 script {
@@ -98,7 +98,7 @@ pipeline {
             }
         }
         
-        stage(' Connexion à AKS') {
+        stage(' Connexion a AKS') {
             steps {
                 echo ' Récupération des credentials AKS...'
                 script {
@@ -219,7 +219,7 @@ pipeline {
             }
         }
         
-        stage(' Déploiement avec Ansible') {
+        stage(' Deploiement avec Ansible') {
             steps {
                 echo ' Déploiement sur AKS avec Ansible...'
                 script {
@@ -267,7 +267,7 @@ pipeline {
             }
         }
         
-        stage(' Vérification finale') {
+        stage(' Verification finale') {
             steps {
                 echo ' Vérification du déploiement...'
                 script {
