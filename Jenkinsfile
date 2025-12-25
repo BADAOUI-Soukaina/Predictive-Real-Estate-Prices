@@ -16,16 +16,16 @@ pipeline {
     }
     
     stages {
-        stage('📥 Checkout') {
+        stage(' Checkout') {
             steps {
-                echo '📥 Récupération du code depuis Git...'
+                echo ' Recuperation du code depuis Git...'
                 checkout scm
             }
         }
         
-        stage('🔍 Vérifier les prérequis') {
+        stage(' Vérifier les prerequis') {
             steps {
-                echo '🔍 Vérification des outils...'
+                echo '🔍 Verification des outils...'
                 script {
                     // Sur Windows, utiliser bat au lieu de sh
                     if (isUnix()) {
@@ -41,9 +41,9 @@ pipeline {
             }
         }
         
-        stage('🐳 Build Docker Image') {
+        stage(' Build Docker Image') {
             steps {
-                echo '🐳 Construction de l\'image Docker...'
+                echo ' Construction de l\'image Docker...'
                 script {
                     dir('app') {
                         if (isUnix()) {
@@ -58,9 +58,9 @@ pipeline {
             }
         }
         
-        stage('🧪 Tests') {
+        stage(' Tests') {
             steps {
-                echo '🧪 Exécution des tests...'
+                echo ' Exécution des tests...'
                 script {
                     if (isUnix()) {
                         sh """
@@ -83,9 +83,9 @@ pipeline {
             }
         }
         
-        stage('📤 Push to Docker Hub') {
+        stage(' Push to Docker Hub') {
             steps {
-                echo '📤 Push vers Docker Hub...'
+                echo ' Push vers Docker Hub...'
                 script {
                     if (isUnix()) {
                         sh "echo ${DOCKER_HUB_CREDENTIALS_PSW} | docker login -u ${DOCKER_HUB_CREDENTIALS_USR} --password-stdin"
@@ -102,39 +102,54 @@ pipeline {
             }
         }
         
-        stage('☸️ Deploy to Kubernetes') {
+        stage(' Deploy to Kubernetes') {
             steps {
-                echo '☸️ Déploiement sur Kubernetes AKS...'
+                echo ' Déploiement sur Kubernetes AKS...'
                 script {
-                    if (isUnix()) {
-                        sh """
-                            az aks get-credentials --resource-group ${RESOURCE_GROUP} --name ${AKS_CLUSTER} --overwrite-existing
-                            kubectl get nodes
-                            kubectl set image deployment/${DEPLOYMENT_NAME} immobilier-container=${DOCKER_IMAGE}:${BUILD_NUMBER} -n ${K8S_NAMESPACE}
-                            kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE} --timeout=5m
-                        """
-                    } else {
-                        bat """
-                            az aks get-credentials --resource-group ${RESOURCE_GROUP} --name ${AKS_CLUSTER} --overwrite-existing
-                            kubectl get nodes
-                            kubectl set image deployment/${DEPLOYMENT_NAME} immobilier-container=${DOCKER_IMAGE}:${BUILD_NUMBER} -n ${K8S_NAMESPACE}
-                            kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE} --timeout=5m
-                        """
+                    withCredentials([
+                        string(credentialsId: 'azure-sp-app-id', variable: 'AZURE_APP_ID'),
+                        string(credentialsId: 'azure-sp-password', variable: 'AZURE_PASSWORD'),
+                        string(credentialsId: 'azure-sp-tenant', variable: 'AZURE_TENANT')
+                    ]) {
+                        if (isUnix()) {
+                            sh """
+                                # Login avec Service Principal
+                                az login --service-principal -u \${AZURE_APP_ID} -p \${AZURE_PASSWORD} --tenant \${AZURE_TENANT}
+                                
+                                # Récupérer credentials AKS
+                                az aks get-credentials --resource-group ${RESOURCE_GROUP} --name ${AKS_CLUSTER} --overwrite-existing
+                                
+                                # Vérifier connexion
+                                kubectl get nodes
+                                
+                                # Déployer
+                                kubectl set image deployment/${DEPLOYMENT_NAME} immobilier-container=${DOCKER_IMAGE}:${BUILD_NUMBER} -n ${K8S_NAMESPACE}
+                                kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE} --timeout=5m
+                            """
+                        } else {
+                            bat """
+                                az login --service-principal -u %AZURE_APP_ID% -p %AZURE_PASSWORD% --tenant %AZURE_TENANT%
+                                az aks get-credentials --resource-group ${RESOURCE_GROUP} --name ${AKS_CLUSTER} --overwrite-existing
+                                kubectl get nodes
+                                kubectl set image deployment/${DEPLOYMENT_NAME} immobilier-container=${DOCKER_IMAGE}:${BUILD_NUMBER} -n ${K8S_NAMESPACE}
+                                kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE} --timeout=5m
+                            """
+                        }
                     }
                 }
             }
         }
         
-        stage('✅ Vérification') {
+        stage(' Verification') {
             steps {
-                echo '✅ Vérification du déploiement...'
+                echo ' Verification du déploiement...'
                 script {
                     if (isUnix()) {
                         sh """
                             kubectl get pods -n ${K8S_NAMESPACE}
                             kubectl get svc -n ${K8S_NAMESPACE}
                             EXTERNAL_IP=\$(kubectl get svc immobilier-service -n ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-                            echo "🌐 Application accessible sur: http://\${EXTERNAL_IP}"
+                            echo " Application accessible sur: http://\${EXTERNAL_IP}"
                         """
                     } else {
                         bat """
@@ -146,7 +161,7 @@ pipeline {
                                 script: "kubectl get svc immobilier-service -n ${K8S_NAMESPACE} -o jsonpath=\"{.status.loadBalancer.ingress[0].ip}\"",
                                 returnStdout: true
                             ).trim()
-                            echo "🌐 Application accessible sur: http://${externalIp}"
+                            echo " Application accessible sur: http://${externalIp}"
                         }
                     }
                 }
@@ -156,10 +171,10 @@ pipeline {
     
     post {
         success {
-            echo '✅ Pipeline réussi ! Application déployée avec succès.'
+            echo ' Pipeline reussi ! Application déployée avec succès.'
         }
         failure {
-            echo '❌ Pipeline échoué. Vérifier les logs ci-dessus.'
+            echo ' Pipeline echoue. Vérifier les logs ci-dessus.'
         }
         always {
             echo '🧹 Nettoyage des images Docker locales...'
