@@ -106,20 +106,35 @@ pipeline {
             steps {
                 echo '☸️ Déploiement sur Kubernetes AKS...'
                 script {
-                    if (isUnix()) {
-                        sh """
-                            az aks get-credentials --resource-group ${RESOURCE_GROUP} --name ${AKS_CLUSTER} --overwrite-existing
-                            kubectl get nodes
-                            kubectl set image deployment/${DEPLOYMENT_NAME} immobilier-container=${DOCKER_IMAGE}:${BUILD_NUMBER} -n ${K8S_NAMESPACE}
-                            kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE} --timeout=5m
-                        """
-                    } else {
-                        bat """
-                            az aks get-credentials --resource-group ${RESOURCE_GROUP} --name ${AKS_CLUSTER} --overwrite-existing
-                            kubectl get nodes
-                            kubectl set image deployment/${DEPLOYMENT_NAME} immobilier-container=${DOCKER_IMAGE}:${BUILD_NUMBER} -n ${K8S_NAMESPACE}
-                            kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE} --timeout=5m
-                        """
+                    withCredentials([
+                        string(credentialsId: 'azure-sp-app-id', variable: 'AZURE_APP_ID'),
+                        string(credentialsId: 'azure-sp-password', variable: 'AZURE_PASSWORD'),
+                        string(credentialsId: 'azure-sp-tenant', variable: 'AZURE_TENANT')
+                    ]) {
+                        if (isUnix()) {
+                            sh """
+                                # Login avec Service Principal
+                                az login --service-principal -u \${AZURE_APP_ID} -p \${AZURE_PASSWORD} --tenant \${AZURE_TENANT}
+                                
+                                # Récupérer credentials AKS
+                                az aks get-credentials --resource-group ${RESOURCE_GROUP} --name ${AKS_CLUSTER} --overwrite-existing
+                                
+                                # Vérifier connexion
+                                kubectl get nodes
+                                
+                                # Déployer
+                                kubectl set image deployment/${DEPLOYMENT_NAME} immobilier-container=${DOCKER_IMAGE}:${BUILD_NUMBER} -n ${K8S_NAMESPACE}
+                                kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE} --timeout=5m
+                            """
+                        } else {
+                            bat """
+                                az login --service-principal -u %AZURE_APP_ID% -p %AZURE_PASSWORD% --tenant %AZURE_TENANT%
+                                az aks get-credentials --resource-group ${RESOURCE_GROUP} --name ${AKS_CLUSTER} --overwrite-existing
+                                kubectl get nodes
+                                kubectl set image deployment/${DEPLOYMENT_NAME} immobilier-container=${DOCKER_IMAGE}:${BUILD_NUMBER} -n ${K8S_NAMESPACE}
+                                kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE} --timeout=5m
+                            """
+                        }
                     }
                 }
             }
