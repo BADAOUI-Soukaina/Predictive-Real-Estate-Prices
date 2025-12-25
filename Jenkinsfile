@@ -51,7 +51,7 @@ pipeline {
                     script {
                         bat """
                         docker run --rm ^
-                        --network host ^
+                        --dns 8.8.8.8 ^
                         -v "%WORKSPACE%":/ansible ^
                         -v "%SSH_KEY%":/root/.ssh/id_rsa ^
                         willhallonline/ansible:latest ^
@@ -60,6 +60,7 @@ pipeline {
                         --private-key /root/.ssh/id_rsa ^
                         --extra-vars "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
                         """
+                        
                     }
                 }
             }
