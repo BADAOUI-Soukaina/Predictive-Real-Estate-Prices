@@ -25,7 +25,7 @@ pipeline {
         
         stage(' Vérifier les prerequis') {
             steps {
-                echo '🔍 Verification des outils...'
+                echo ' Verification des outils...'
                 script {
                     // Sur Windows, utiliser bat au lieu de sh
                     if (isUnix()) {
@@ -60,7 +60,7 @@ pipeline {
         
         stage(' Tests') {
             steps {
-                echo ' Exécution des tests...'
+                echo ' Execution des tests...'
                 script {
                     if (isUnix()) {
                         sh """
