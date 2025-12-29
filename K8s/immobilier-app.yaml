@@ -1,0 +1,111 @@
+# ========================================
+# Namespace
+# ========================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: immobilier-app
+
+---
+# ========================================
+# Deployment
+# ========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immobilier-deployment
+  namespace: immobilier-app
+  labels:
+    app: immobilier
+spec:
+  replicas: 3  # 3 instances de votre app
+  selector:
+    matchLabels:
+      app: immobilier
+  template:
+    metadata:
+      labels:
+        app: immobilier
+    spec:
+      containers:
+      - name: immobilier-container
+        image: sgmarwa/immobilier_price_prediction-app:latest
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+
+---
+# ========================================
+# Service (LoadBalancer)
+# ========================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: immobilier-service
+  namespace: immobilier-app
+  labels:
+    app: immobilier
+spec:
+  type: LoadBalancer
+  selector:
+    app: immobilier
+  ports:
+  - protocol: TCP
+    port: 80        # Port externe
+    targetPort: 8000 # Port du conteneur
+  sessionAffinity: ClientIP
+
+---
+# ========================================
+# Horizontal Pod Autoscaler
+# ========================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: immobilier-hpa
+  namespace: immobilier-app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: immobilier-deployment
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

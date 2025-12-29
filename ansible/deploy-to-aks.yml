@@ -1,0 +1,141 @@
+---
+- name: Déployer l'application sur AKS
+  hosts: localhost
+  connection: local
+  
+  vars:
+    resource_group: "Predictive-Real-Estate-Prices"
+    aks_cluster_name: "immobilier-aks-cluster"
+    k8s_manifests_path: "../k8s"
+  
+  tasks:
+    # ==================== VÉRIFIER LES OUTILS ====================
+    - name: Vérifier si Azure CLI est installé
+      command: az --version
+      register: az_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Installer Azure CLI si nécessaire
+      block:
+        - name: Télécharger le script d'installation Azure CLI
+          get_url:
+            url: https://aka.ms/InstallAzureCLIDeb
+            dest: /tmp/install-azure-cli.sh
+            mode: '0755'
+        
+        - name: Installer Azure CLI
+          command: bash /tmp/install-azure-cli.sh
+          become: yes
+      when: az_check.rc != 0
+    
+    - name: Vérifier si kubectl est installé
+      command: kubectl version --client
+      register: kubectl_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Installer kubectl si nécessaire
+      block:
+        - name: Télécharger kubectl
+          get_url:
+            url: "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+            dest: /tmp/kubectl
+            mode: '0755'
+        
+        - name: Installer kubectl
+          copy:
+            src: /tmp/kubectl
+            dest: /usr/local/bin/kubectl
+            mode: '0755'
+            remote_src: yes
+          become: yes
+      when: kubectl_check.rc != 0
+    
+    # ==================== CONNEXION À AKS ====================
+    - name: Vérifier la connexion Azure
+      command: az account show
+      register: az_login_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Message si non connecté
+      fail:
+        msg: |
+          Vous devez vous connecter à Azure :
+          az login
+      when: az_login_check.rc != 0
+    
+    - name: Récupérer les credentials AKS
+      command: >
+        az aks get-credentials 
+        --resource-group {{ resource_group }} 
+        --name {{ aks_cluster_name }}
+        --overwrite-existing
+      register: aks_creds
+    
+    - name: Vérifier la connexion au cluster
+      command: kubectl get nodes
+      register: nodes_output
+      changed_when: false
+    
+    - name: Afficher les nodes du cluster
+      debug:
+        msg: "{{ nodes_output.stdout_lines }}"
+    
+    # ==================== DÉPLOYER L'APPLICATION ====================
+    - name: Créer le namespace si nécessaire
+      command: kubectl create namespace immobilier-app
+      register: ns_create
+      failed_when: false
+      changed_when: ns_create.rc == 0
+    
+    - name: Déployer les manifests Kubernetes
+      command: kubectl apply -f {{ k8s_manifests_path }}/immobilier-app.yaml
+      register: deploy_output
+    
+    - name: Afficher le résultat du déploiement
+      debug:
+        msg: "{{ deploy_output.stdout_lines }}"
+    
+    # ==================== VÉRIFIER LE DÉPLOIEMENT ====================
+    - name: Attendre que les pods soient prêts
+      command: >
+        kubectl wait --for=condition=ready pod 
+        -l app=immobilier 
+        -n immobilier-app 
+        --timeout=300s
+      register: pods_ready
+    
+    - name: Obtenir le statut des pods
+      command: kubectl get pods -n immobilier-app
+      register: pods_status
+      changed_when: false
+    
+    - name: Afficher les pods
+      debug:
+        msg: "{{ pods_status.stdout_lines }}"
+    
+    - name: Obtenir l'IP externe du LoadBalancer
+      command: >
+        kubectl get svc immobilier-service 
+        -n immobilier-app 
+        -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+      register: external_ip
+      until: external_ip.stdout != ""
+      retries: 20
+      delay: 15
+      changed_when: false
+    
+    - name: Afficher l'URL de l'application
+      debug:
+        msg: |
+          
+          Déploiement réussi !
+          
+          URL de l'application : http://{{ external_ip.stdout }}
+          
+          Commandes utiles :
+          - Voir les pods : kubectl get pods -n immobilier-app
+          - Voir les logs : kubectl logs -l app=immobilier -n immobilier-app
+          - Voir le service : kubectl get svc -n immobilier-app

@@ -60,7 +60,6 @@ class UserInput(BaseModel):
     nombre_de_chambres: int
     nombre_de_salles_de_bain: int
     etage: int
-
     terrasse: int
     garage: int
     ascenseur: int
